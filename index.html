@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Voice Calculator</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;font-family:Arial,sans-serif;background:linear-gradient(135deg,#141e30,#243b55);color:#fff}
+.calculator{width:90%;max-width:500px;padding:30px;border-radius:25px;background:rgba(255,255,255,.1);backdrop-filter:blur(15px);box-shadow:0 20px 50px rgba(0,0,0,.4);text-align:center}
+h1{margin-top:0;font-size:34px}.subtitle{color:#d5e3f5;margin-bottom:25px}
+.display{width:100%;min-height:75px;padding:18px;margin-bottom:20px;border-radius:15px;background:rgba(0,0,0,.35);font-size:26px;display:flex;justify-content:center;align-items:center;word-break:break-word}
+button{border:0;border-radius:14px;padding:15px 20px;margin:6px;font-size:17px;font-weight:bold;cursor:pointer;transition:.2s}
+button:hover{transform:translateY(-2px)}
+#listenButton{width:90%;background:#00c853;color:#fff;font-size:20px}
+#listenButton:hover{background:#00a844}
+#clearButton{background:#ff5252;color:#fff}
+#calculateButton{background:#2196f3;color:#fff;margin:0}
+.manual{display:flex;gap:8px;margin-top:20px}
+.manual input{flex:1;padding:15px;border:0;outline:0;border-radius:12px;font-size:17px}
+.status{min-height:25px;margin-top:18px;color:#ffd54f}
+.answer{min-height:35px;margin-top:15px;font-size:25px;font-weight:bold}
+.examples{margin-top:20px;padding:15px;border-radius:15px;background:rgba(255,255,255,.08);color:#d5e3f5;line-height:1.7}
+@media(max-width:500px){.calculator{padding:20px}h1{font-size:28px}.manual{flex-direction:column}#calculateButton{width:100%}}
+</style>
+</head>
+<body>
+<div class="calculator">
+<h1>🎤 Voice Calculator</h1>
+<div class="subtitle">Speak your calculation and get the answer</div>
+<div id="display" class="display">Ready...</div>
+<button id="listenButton" onclick="voiceInput()">🎙️ Speak Your Calculation</button><br>
+<button id="clearButton" onclick="clearCalculator()">Clear</button>
+<div class="manual">
+<input id="manualInput" type="text" placeholder="Example: 25 plus 5">
+<button id="calculateButton" onclick="calculateManual()">Calculate</button>
+</div>
+<div class="examples"><strong>Try saying:</strong><br>
+"10 plus 5"<br>
+"20 minus 8"<br>
+"6 multiply 7"<br>
+"100 divided by 4"<br>
+"2 power of 5"
+</div>
+<div id="status" class="status"></div>
+<div id="answer" class="answer"></div>
+</div>
+
+<script>
+function speak(text){
+    if("speechSynthesis" in window){
+        window.speechSynthesis.cancel();
+        const voice=new SpeechSynthesisUtterance(text);
+        voice.rate=.9;
+        voice.volume=1;
+        window.speechSynthesis.speak(voice);
+    }
+}
+function add(a,b){return a+b}
+function sub(a,b){return a-b}
+function multiply(a,b){return a*b}
+function divide(a,b){return a/b}
+function power(a,b){return a**b}
+
+const operations={"+":add,"-":sub,"*":multiply,"/":divide,"**":power};
+
+function convertText(text){
+    text=text.toLowerCase();
+    text=text.replace(/\bplus\b/g,"+");
+    text=text.replace(/\badd\b/g,"+");
+    text=text.replace(/\bminus\b/g,"-");
+    text=text.replace(/\bsubtract\b/g,"-");
+    text=text.replace(/\bmultiply\b/g,"*");
+    text=text.replace(/\btimes\b/g,"*");
+    text=text.replace(/\bx\b/g,"*");
+    text=text.replace(/\binto\b/g,"*");
+    text=text.replace(/\bdivided by\b/g,"/");
+    text=text.replace(/\bdivide\b/g,"/");
+    text=text.replace(/\bwhole power of\b/g,"**");
+    text=text.replace(/\bwhole power\b/g,"**");
+    text=text.replace(/\bpower of\b/g,"**");
+    text=text.replace(/\bpower\b/g,"**");
+    return text.replace(/\s+/g," ").trim();
+}
+
+function calculate(text){
+    if(!text||text.trim()==="")return;
+    const convertedText=convertText(text);
+    document.getElementById("display").textContent=convertedText;
+
+    const pattern=/(-?\d+(?:\.\d+)?)\s*(\*\*|[+\-*/])\s*(-?\d+(?:\.\d+)?)/;
+    const match=convertedText.match(pattern);
+
+    if(!match){
+        const message="Your operation is not valid. Please check once.";
+        document.getElementById("status").textContent=message;
+        document.getElementById("answer").textContent="";
+        speak(message);
+        return;
+    }
+
+    const n1=parseFloat(match[1]);
+    const operation=match[2];
+    const n2=parseFloat(match[3]);
+
+    if(!(operation in operations)){
+        const message="Your operation is not valid. Please check once.";
+        document.getElementById("status").textContent=message;
+        speak(message);
+        return;
+    }
+
+    if(operation==="/"&&n2===0){
+        const message="Cannot divide by zero.";
+        document.getElementById("status").textContent=message;
+        document.getElementById("answer").textContent="";
+        speak(message);
+        return;
+    }
+
+    const answer=operations[operation](n1,n2);
+    document.getElementById("status").textContent="Your operation is valid.";
+    document.getElementById("answer").textContent=`Answer: ${answer}`;
+    speak(`The answer is ${answer}`);
+}
+
+function voiceInput(){
+    const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+        const message="Speech recognition is not supported in this browser. Please use Google Chrome.";
+        document.getElementById("status").textContent=message;
+        speak(message);
+        return;
+    }
+
+    const recognition=new SpeechRecognition();
+    recognition.lang="en-US";
+    recognition.continuous=false;
+    recognition.interimResults=false;
+    recognition.maxAlternatives=1;
+
+    document.getElementById("status").textContent="Listening...";
+    document.getElementById("display").textContent="🎙️ Listening...";
+    speak("Speak your calculation");
+
+    recognition.start();
+
+    recognition.onresult=function(event){
+        const text=event.results[0][0].transcript;
+        document.getElementById("status").textContent=`You said: ${text}`;
+        calculate(text);
+    };
+
+    recognition.onerror=function(event){
+        let message="Could not understand.";
+        if(event.error==="not-allowed")message="Microphone permission was denied.";
+        if(event.error==="network")message="Speech recognition is not available.";
+        document.getElementById("status").textContent=message;
+        speak(message);
+    };
+}
+
+function calculateManual(){
+    calculate(document.getElementById("manualInput").value);
+}
+
+function clearCalculator(){
+    document.getElementById("display").textContent="Ready...";
+    document.getElementById("status").textContent="";
+    document.getElementById("answer").textContent="";
+    document.getElementById("manualInput").value="";
+    if("speechSynthesis" in window)window.speechSynthesis.cancel();
+}
+
+document.getElementById("manualInput").addEventListener("keydown",function(event){
+    if(event.key==="Enter")calculateManual();
+});
+</script>
+</body>
+</html>
